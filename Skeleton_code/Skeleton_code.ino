@@ -1,7 +1,7 @@
 #include "MPU9250.h"
 
 MPU9250 IMU(0x68, 0);  //we are not actually using MPU9250. We are using MP9255....REEEEEEEEEEE
-                       //modified the library for the use of MP9255
+                       //modified the library for the use of MP9255 accel
 
 float ax, ay, az, t;
 int beginStatus;
