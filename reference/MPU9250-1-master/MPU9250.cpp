@@ -2,6 +2,7 @@
 MPU9250.cpp
 Brian R Taylor
 brian.taylor@bolderflight.com
+2017-01-04
 
 Copyright (c) 2016 Bolder Flight Systems
 
@@ -28,7 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "Arduino.h"
 #include "MPU9250.h"
 #include "i2c_t3.h"  // I2C library
-#include "SPI.h"     // SPI Library
+#include "SPI.h" // SPI Library
 
 /* MPU9250 object, input the I2C address and I2C bus */
 MPU9250::MPU9250(uint8_t address, uint8_t bus){
@@ -58,78 +59,211 @@ MPU9250::MPU9250(uint8_t address, uint8_t bus, i2c_pins pins, i2c_pullup pullups
     _useSPI = false; // set to use I2C instead of SPI
 }
 
+/* MPU9250 object, input the SPI CS Pin */
+MPU9250::MPU9250(uint8_t csPin){
+    _csPin = csPin; // SPI CS Pin
+    _mosiPin = MOSI_PIN_11;	// SPI MOSI Pin, set to default
+    _useSPI = true; // set to use SPI instead of I2C
+    _useSPIHS = false; // defaul to low speed SPI transactions until data reads start to occur
+}
+
+/* MPU9250 object, input the SPI CS Pin and MOSI Pin */
+MPU9250::MPU9250(uint8_t csPin, spi_mosi_pin pin){
+    _csPin = csPin; // SPI CS Pin
+    _mosiPin = pin;	// SPI MOSI Pin
+    _useSPI = true; // set to use SPI instead of I2C
+    _useSPIHS = false; // defaul to low speed SPI transactions until data reads start to occur
+}
+
 /* starts I2C communication and sets up the MPU-9250 */
 int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange){
     uint8_t buff[3];
     uint8_t data[7];
 
-		// using I2C for communication
+    if( _useSPI ){ // using SPI for communication
 
-    if( !_userDefI2C ) { // setup the I2C pins and pullups based on bus number if not defined by user
-        /* setting the I2C pins, pullups, and protecting against _bus out of range */
-        _pullups = I2C_PULLUP_EXT; // default to external pullups
+        // setting CS pin to output
+        pinMode(_csPin,OUTPUT);
 
-        #if defined(__MK20DX128__) // Teensy 3.0
-            _pins = I2C_PINS_18_19;
-            _bus = 0;
-        #endif
+        // setting CS pin high
+        digitalWriteFast(_csPin,HIGH);
 
-        #if defined(__MK20DX256__) // Teensy 3.1/3.2
-            if(_bus == 1) {
-                _pins = I2C_PINS_29_30;
-            }
-            else{
-                _pins = I2C_PINS_18_19;
-                _bus = 0;
-            }
+        // Teensy 3.0 || Teensy 3.1/3.2
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
 
-        #endif
+	        // configure and begin the SPI
+	        switch( _mosiPin ){
 
-        #if defined(__MK64FX512__) // Teensy 3.5
-            if(_bus == 2) {
-                _pins = I2C_PINS_3_4;
-            }
-            else if(_bus == 1) {
-                _pins = I2C_PINS_37_38;
-            }
-            else{
-                _pins = I2C_PINS_18_19;
-                _bus = 0;
-            }
+				case MOSI_PIN_7:	// SPI bus 0 alternate 1
+				    SPI.setMOSI(7);
+	        		SPI.setMISO(8);
+	        		SPI.setSCK(14);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_11:	// SPI bus 0 default
+					SPI.setMOSI(11);
+	        		SPI.setMISO(12);
+	        		SPI.setSCK(13);
+	        		SPI.begin();
+	        		break;
+	        }
 
         #endif
 
-        #if defined(__MK66FX1M0__) // Teensy 3.6
-            if(_bus == 3) {
-                _pins = I2C_PINS_56_57;
-            }
-            else if(_bus == 2) {
-                _pins = I2C_PINS_3_4;
-            }
-            else if(_bus == 1) {
-                _pins = I2C_PINS_37_38;
-            }
-            else{
-                _pins = I2C_PINS_18_19;
-                _bus = 0;
-            }
+        // Teensy 3.5 || Teensy 3.6
+		#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
+
+	        // configure and begin the SPI
+	        switch( _mosiPin ){
+
+	        	case MOSI_PIN_0:	// SPI bus 1 default
+	        		SPI1.setMOSI(0);
+	        		SPI1.setMISO(1);
+	        		SPI1.setSCK(32);
+	        		SPI1.begin();
+	        		break;
+				case MOSI_PIN_7:	// SPI bus 0 alternate 1
+				    SPI.setMOSI(7);
+	        		SPI.setMISO(8);
+	        		SPI.setSCK(14);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_11:	// SPI bus 0 default
+					SPI.setMOSI(11);
+	        		SPI.setMISO(12);
+	        		SPI.setSCK(13);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_21:	// SPI bus 1 alternate
+		        	SPI1.setMOSI(21);
+	        		SPI1.setMISO(5);
+	        		SPI1.setSCK(20);
+	        		SPI1.begin();
+	        		break;
+				case MOSI_PIN_28:	// SPI bus 0 alternate 2
+	        		SPI.setMOSI(28);
+	        		SPI.setMISO(39);
+	        		SPI.setSCK(27);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_44:	// SPI bus 2 default
+	        		SPI2.setMOSI(44);
+	        		SPI2.setMISO(45);
+	        		SPI2.setSCK(46);
+	        		SPI2.begin();
+	        		break;
+				case MOSI_PIN_52:	// SPI bus 2 alternate
+	        		SPI2.setMOSI(52);
+	        		SPI2.setMISO(51);
+	        		SPI2.setSCK(53);
+	        		SPI2.begin();
+	        		break;
+	        }
 
         #endif
 
-        #if defined(__MKL26Z64__) // Teensy LC
-            if(_bus == 1) {
-                _pins = I2C_PINS_22_23;
-            }
-            else{
-                _pins = I2C_PINS_18_19;
-                _bus = 0;
-            }
+        // Teensy LC
+		#if defined(__MKL26Z64__)
 
-        #endif
+			// configure and begin the SPI
+	        switch( _mosiPin ){
+
+	        	case MOSI_PIN_0:	// SPI bus 1 default
+	        		SPI1.setMOSI(0);
+	        		SPI1.setMISO(1);
+	        		SPI1.setSCK(20);
+	        		SPI1.begin();
+	        		break;
+				case MOSI_PIN_7:	// SPI bus 0 alternate 1
+				    SPI.setMOSI(7);
+	        		SPI.setMISO(8);
+	        		SPI.setSCK(14);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_11:	// SPI bus 0 default
+					SPI.setMOSI(11);
+	        		SPI.setMISO(12);
+	        		SPI.setSCK(13);
+	        		SPI.begin();
+	        		break;
+				case MOSI_PIN_21:	// SPI bus 1 alternate
+		        	SPI1.setMOSI(21);
+	        		SPI1.setMISO(5);
+	        		SPI1.setSCK(20);
+	        		SPI1.begin();
+	        		break;
+	        }
+
+		#endif
     }
+    else{ // using I2C for communication
 
-    // starting the I2C bus
-    i2c_t3(_bus).begin(I2C_MASTER, 0, _pins, _pullups, _i2cRate);
+        if( !_userDefI2C ) { // setup the I2C pins and pullups based on bus number if not defined by user
+            /* setting the I2C pins, pullups, and protecting against _bus out of range */
+            _pullups = I2C_PULLUP_EXT; // default to external pullups
+
+            #if defined(__MK20DX128__) // Teensy 3.0
+                _pins = I2C_PINS_18_19;
+                _bus = 0;
+            #endif
+
+            #if defined(__MK20DX256__) // Teensy 3.1/3.2
+                if(_bus == 1) {
+                    _pins = I2C_PINS_29_30;
+                }
+                else{
+                    _pins = I2C_PINS_18_19;
+                    _bus = 0;
+                }
+
+            #endif
+
+            #if defined(__MK64FX512__) // Teensy 3.5
+                if(_bus == 2) {
+                    _pins = I2C_PINS_3_4;
+                }
+                else if(_bus == 1) {
+                    _pins = I2C_PINS_37_38;
+                }
+                else{
+                    _pins = I2C_PINS_18_19;
+                    _bus = 0;
+                }
+
+            #endif
+
+            #if defined(__MK66FX1M0__) // Teensy 3.6
+                if(_bus == 3) {
+                    _pins = I2C_PINS_56_57;
+                }
+                else if(_bus == 2) {
+                    _pins = I2C_PINS_3_4;
+                }
+                else if(_bus == 1) {
+                    _pins = I2C_PINS_37_38;
+                }
+                else{
+                    _pins = I2C_PINS_18_19;
+                    _bus = 0;
+                }
+
+            #endif
+
+            #if defined(__MKL26Z64__) // Teensy LC
+                if(_bus == 1) {
+                    _pins = I2C_PINS_22_23;
+                }
+                else{
+                    _pins = I2C_PINS_18_19;
+                    _bus = 0;
+                }
+
+            #endif
+        }
+
+        // starting the I2C bus
+        i2c_t3(_bus).begin(I2C_MASTER, 0, _pins, _pullups, _i2cRate);
+    }
 
     // select clock source to gyro
     if( !writeRegister(PWR_MGMNT_1,CLOCK_SEL_PLL) ){
@@ -138,16 +272,18 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
 
     // enable I2C master mode
     if( !writeRegister(USER_CTRL,I2C_MST_EN) ){
-        return -2;
+        return -1;
     }
 
     // set the I2C bus speed to 400 kHz
     if( !writeRegister(I2C_MST_CTRL,I2C_MST_CLK) ){
-        return -3;
+        return -1;
     }
 
     // set AK8963 to Power Down
-    writeAK8963Register(AK8963_CNTL1,AK8963_PWR_DOWN);
+    if( !writeAK8963Register(AK8963_CNTL1,AK8963_PWR_DOWN) ){
+        return -1;
+    }
 
     // reset the MPU9250
     writeRegister(PWR_MGMNT_1,PWR_RESET);
@@ -160,18 +296,18 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
 
     // select clock source to gyro
     if( !writeRegister(PWR_MGMNT_1,CLOCK_SEL_PLL) ){
-        return -4;
+        return -1;
     }
 
     // check the WHO AM I byte, expected value is 0x71 (decimal 113)
-    if(( whoAmI() == 113 )||( whoAmI() == 115 )){
+		if(( whoAmI() == 113 )||( whoAmI() == 115 )){    
     } else {
         return -5;
     }
 
     // enable accelerometer and gyro
     if( !writeRegister(PWR_MGMNT_2,SEN_ENABLE) ){
-        return -6;
+        return -1;
     }
 
     /* setup the accel and gyro ranges */
@@ -180,7 +316,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case ACCEL_RANGE_2G:
             // setting the accel range to 2G
             if( !writeRegister(ACCEL_CONFIG,ACCEL_FS_SEL_2G) ){
-                return -7;
+                return -1;
             }
             _accelScale = G * 2.0f/32767.5f; // setting the accel scale to 2G
             break;
@@ -188,7 +324,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case ACCEL_RANGE_4G:
             // setting the accel range to 4G
             if( !writeRegister(ACCEL_CONFIG,ACCEL_FS_SEL_4G) ){
-                return -7;
+                return -1;
             }
             _accelScale = G * 4.0f/32767.5f; // setting the accel scale to 4G
             break;
@@ -196,7 +332,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case ACCEL_RANGE_8G:
             // setting the accel range to 8G
             if( !writeRegister(ACCEL_CONFIG,ACCEL_FS_SEL_8G) ){
-                return -7;
+                return -1;
             }
             _accelScale = G * 8.0f/32767.5f; // setting the accel scale to 8G
             break;
@@ -204,7 +340,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case ACCEL_RANGE_16G:
             // setting the accel range to 16G
             if( !writeRegister(ACCEL_CONFIG,ACCEL_FS_SEL_16G) ){
-                return -7;
+                return -1;
             }
             _accelScale = G * 16.0f/32767.5f; // setting the accel scale to 16G
             break;
@@ -214,7 +350,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case GYRO_RANGE_250DPS:
             // setting the gyro range to 250DPS
             if( !writeRegister(GYRO_CONFIG,GYRO_FS_SEL_250DPS) ){
-                return -8;
+                return -1;
             }
             _gyroScale = 250.0f/32767.5f * _d2r; // setting the gyro scale to 250DPS
             break;
@@ -222,7 +358,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case GYRO_RANGE_500DPS:
             // setting the gyro range to 500DPS
             if( !writeRegister(GYRO_CONFIG,GYRO_FS_SEL_500DPS) ){
-                return -8;
+                return -1;
             }
             _gyroScale = 500.0f/32767.5f * _d2r; // setting the gyro scale to 500DPS
             break;
@@ -230,7 +366,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case GYRO_RANGE_1000DPS:
             // setting the gyro range to 1000DPS
             if( !writeRegister(GYRO_CONFIG,GYRO_FS_SEL_1000DPS) ){
-                return -8;
+                return -1;
             }
             _gyroScale = 1000.0f/32767.5f * _d2r; // setting the gyro scale to 1000DPS
             break;
@@ -238,7 +374,7 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
         case GYRO_RANGE_2000DPS:
             // setting the gyro range to 2000DPS
             if( !writeRegister(GYRO_CONFIG,GYRO_FS_SEL_2000DPS) ){
-                return -8;
+                return -1;
             }
             _gyroScale = 2000.0f/32767.5f * _d2r; // setting the gyro scale to 2000DPS
             break;
@@ -246,30 +382,30 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
 
     // enable I2C master mode
     if( !writeRegister(USER_CTRL,I2C_MST_EN) ){
-    	return -9;
+    	return -1;
     }
 
 	// set the I2C bus speed to 400 kHz
 	if( !writeRegister(I2C_MST_CTRL,I2C_MST_CLK) ){
-		return -10;
+		return -1;
 	}
 
 	// check AK8963 WHO AM I register, expected value is 0x48 (decimal 72)
 	if( whoAmIAK8963() != 72 ){
-        return -11;
+        return -1;
 	}
 
     /* get the magnetometer calibration */
 
     // set AK8963 to Power Down
     if( !writeAK8963Register(AK8963_CNTL1,AK8963_PWR_DOWN) ){
-        return -12;
+        return -1;
     }
     delay(100); // long wait between AK8963 mode changes
 
     // set AK8963 to FUSE ROM access
     if( !writeAK8963Register(AK8963_CNTL1,AK8963_FUSE_ROM) ){
-        return -13;
+        return -1;
     }
     delay(100); // long wait between AK8963 mode changes
 
@@ -281,19 +417,19 @@ int MPU9250::begin(mpu9250_accel_range accelRange, mpu9250_gyro_range gyroRange)
 
     // set AK8963 to Power Down
     if( !writeAK8963Register(AK8963_CNTL1,AK8963_PWR_DOWN) ){
-        return -14;
+        return -1;
     }
     delay(100); // long wait between AK8963 mode changes
 
     // set AK8963 to 16 bit resolution, 100 Hz update rate
     if( !writeAK8963Register(AK8963_CNTL1,AK8963_CNT_MEAS2) ){
-        return -15;
+        return -1;
     }
     delay(100); // long wait between AK8963 mode changes
 
     // select clock source to gyro
     if( !writeRegister(PWR_MGMNT_1,CLOCK_SEL_PLL) ){
-        return -16;
+        return -1;
     }
 
     // instruct the MPU9250 to get 7 bytes of data from the AK8963 at the sample rate
@@ -724,10 +860,80 @@ bool MPU9250::writeRegister(uint8_t subAddress, uint8_t data){
     uint8_t buff[1];
 
     /* write data to device */
-  	i2c_t3(_bus).beginTransmission(_address); // open the device
-  	i2c_t3(_bus).write(subAddress); // write the register address
-  	i2c_t3(_bus).write(data); // write the data
-  	i2c_t3(_bus).endTransmission();
+    if( _useSPI ){
+
+    	// Teensy 3.0 || Teensy 3.1/3.2
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)){
+		        SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI.transfer(subAddress); // write the register address
+		        SPI.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+
+        // Teensy 3.5 || Teensy 3.6
+		#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)||(_mosiPin == MOSI_PIN_28)){
+		        SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI.transfer(subAddress); // write the register address
+		        SPI.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_0)||(_mosiPin == MOSI_PIN_21)){
+		        SPI1.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI1.transfer(subAddress); // write the register address
+		        SPI1.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI1.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_44)||(_mosiPin == MOSI_PIN_52)){
+		    	SPI2.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI2.transfer(subAddress); // write the register address
+		        SPI2.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI2.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+
+        // Teensy LC
+		#if defined(__MKL26Z64__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)){
+		        SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI.transfer(subAddress); // write the register address
+		        SPI.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_0)||(_mosiPin == MOSI_PIN_21)){
+		        SPI1.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3)); // begin the transaction
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+		        SPI1.transfer(subAddress); // write the register address
+		        SPI1.transfer(data); // write the data
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI1.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+    }
+    else{
+      	i2c_t3(_bus).beginTransmission(_address); // open the device
+      	i2c_t3(_bus).write(subAddress); // write the register address
+      	i2c_t3(_bus).write(data); // write the data
+      	i2c_t3(_bus).endTransmission();
+    }
     delay(10); // need to slow down how fast I write to MPU9250
 
   	/* read back the register */
@@ -744,16 +950,153 @@ bool MPU9250::writeRegister(uint8_t subAddress, uint8_t data){
 
 /* reads registers from MPU9250 given a starting register address, number of bytes, and a pointer to store data */
 void MPU9250::readRegisters(uint8_t subAddress, uint8_t count, uint8_t* dest){
-  i2c_t3(_bus).beginTransmission(_address); // open the device
-  i2c_t3(_bus).write(subAddress); // specify the starting register address
-  i2c_t3(_bus).endTransmission(false);
 
-  i2c_t3(_bus).requestFrom(_address, count); // specify the number of bytes to receive
+    if( _useSPI ){
 
-  uint8_t i = 0; // read the data into the buffer
-  while( i2c_t3(_bus).available() ){
-      dest[i++] = i2c_t3(_bus).readByte();
-  }
+    	// Teensy 3.0 || Teensy 3.1/3.2
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+
+        // Teensy 3.5 || Teensy 3.6
+		#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)||(_mosiPin == MOSI_PIN_28)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_0)||(_mosiPin == MOSI_PIN_21)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI1.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI1.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI1.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI1.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI1.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_44)||(_mosiPin == MOSI_PIN_52)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI2.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI2.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI2.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI2.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+
+        // Teensy LC
+		#if defined(__MKL26Z64__)
+
+	    	if((_mosiPin == MOSI_PIN_11)||(_mosiPin == MOSI_PIN_7)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI.endTransaction(); // end the transaction
+	    	}
+	    	else if((_mosiPin == MOSI_PIN_0)||(_mosiPin == MOSI_PIN_21)){
+		        // begin the transaction
+		        if(_useSPIHS){
+		            SPI1.beginTransaction(SPISettings(SPI_HS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        else{
+		            SPI1.beginTransaction(SPISettings(SPI_LS_CLOCK, MSBFIRST, SPI_MODE3));
+		        }
+		        digitalWriteFast(_csPin,LOW); // select the MPU9250 chip
+
+		        SPI1.transfer(subAddress | SPI_READ); // specify the starting register address
+
+		        for(uint8_t i = 0; i < count; i++){
+		            dest[i] = SPI1.transfer(0x00); // read the data
+		        }
+
+		        digitalWriteFast(_csPin,HIGH); // deselect the MPU9250 chip
+		        SPI1.endTransaction(); // end the transaction
+	    	}
+
+    	#endif
+    }
+    else{
+        i2c_t3(_bus).beginTransmission(_address); // open the device
+        i2c_t3(_bus).write(subAddress); // specify the starting register address
+        i2c_t3(_bus).endTransmission(false);
+
+        i2c_t3(_bus).requestFrom(_address, count); // specify the number of bytes to receive
+
+        uint8_t i = 0; // read the data into the buffer
+        while( i2c_t3(_bus).available() ){
+            dest[i++] = i2c_t3(_bus).readByte();
+        }
+    }
 }
 
 /* writes a register to the AK8963 given a register address and data */
