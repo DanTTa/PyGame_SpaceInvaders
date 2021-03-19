@@ -1,0 +1,88 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Teensy:Teensy3.2 U1
+U 1 1 60545EB0
+P 5000 3600
+F 0 "U1" H 5000 5343 60  0000 C CNN
+F 1 "Teensy3.2" H 5000 5237 60  0000 C CNN
+F 2 "Teensy:Teensy30_31_32_LC" H 5000 5131 60  0000 C CNN
+F 3 "" H 5000 2850 60  0000 C CNN
+	1    5000 3600
+	1    0    0    -1  
+$EndComp
+$Comp
+L custom:MPU9255 U2
+U 1 1 60549A5A
+P 7550 3400
+F 0 "U2" H 7678 3296 50  0000 L CNN
+F 1 "MPU9255" H 7678 3205 50  0000 L CNN
+F 2 "" H 7350 3850 50  0001 C CNN
+F 3 "" H 7350 3850 50  0001 C CNN
+	1    7550 3400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7200 3100 6600 3100
+Wire Wire Line
+	6600 3100 6600 4750
+Wire Wire Line
+	6600 4750 6000 4750
+Wire Wire Line
+	6000 4650 6350 4650
+Wire Wire Line
+	6500 4650 6500 3200
+Wire Wire Line
+	6500 3200 7200 3200
+Wire Wire Line
+	7200 3300 6700 3300
+Wire Wire Line
+	6700 3300 6700 5200
+Wire Wire Line
+	6700 5200 3700 5200
+Wire Wire Line
+	3700 5200 3700 4750
+Wire Wire Line
+	3700 4750 4000 4750
+Wire Wire Line
+	4000 4650 3550 4650
+Wire Wire Line
+	3550 4650 3550 5350
+Wire Wire Line
+	3550 5350 6850 5350
+Wire Wire Line
+	6850 5350 6850 3400
+Wire Wire Line
+	6850 3400 7200 3400
+$Comp
+L Device:C C1
+U 1 1 60550738
+P 6200 4450
+F 0 "C1" V 5948 4450 50  0000 C CNN
+F 1 "10n" V 6039 4450 50  0000 C CNN
+F 2 "" H 6238 4300 50  0001 C CNN
+F 3 "~" H 6200 4450 50  0001 C CNN
+	1    6200 4450
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	6000 4450 6050 4450
+Wire Wire Line
+	6350 4450 6350 4650
+Connection ~ 6350 4650
+Wire Wire Line
+	6350 4650 6500 4650
+$EndSCHEMATC
